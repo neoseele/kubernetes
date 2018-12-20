@@ -123,6 +123,7 @@ func (r *Result) Infos() ([]*Info, error) {
 		if err != nil {
 			return err
 		}
+		fmt.Printf("%+v\n", info)
 		infos = append(infos, info)
 		return nil
 	})

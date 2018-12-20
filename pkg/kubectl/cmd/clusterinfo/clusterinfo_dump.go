@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericclioptions/printers"
+	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
@@ -36,6 +37,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/scheme"
 	"k8s.io/kubernetes/pkg/kubectl/util/i18n"
 	"k8s.io/kubernetes/pkg/kubectl/util/templates"
+	"k8s.io/kubernetes/staging/src/k8s.io/apimachinery/pkg/util/sets"
 )
 
 const (
@@ -58,6 +60,7 @@ type ClusterInfoDumpOptions struct {
 	RESTClientGetter genericclioptions.RESTClientGetter
 	LogsForObject    polymorphichelpers.LogsForObjectFunc
 
+	Builder *resource.Builder
 	genericclioptions.IOStreams
 }
 
@@ -75,7 +78,8 @@ func NewCmdClusterInfoDump(f cmdutil.Factory, ioStreams genericclioptions.IOStre
 		Example: dumpExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.Complete(f, cmd))
-			cmdutil.CheckErr(o.Run())
+			// cmdutil.CheckErr(o.Run())
+			cmdutil.CheckErr(o.RunNew(f))
 		},
 	}
 
@@ -161,7 +165,61 @@ func (o *ClusterInfoDumpOptions) Complete(f cmdutil.Factory, cmd *cobra.Command)
 	o.RESTClientGetter = f
 	o.LogsForObject = polymorphichelpers.LogsForObjectFn
 
+	o.Builder = f.NewBuilder()
 	return nil
+}
+
+func (o *ClusterInfoDumpOptions) RunNew(f cmdutil.Factory) error {
+	discoveryclient, err := f.ToDiscoveryClient()
+	if err != nil {
+		return err
+	}
+
+	lists, err := discoveryclient.ServerPreferredResources()
+	if err != nil {
+		return err
+	}
+
+	// resources := []groupResource{}
+	resources := []string{}
+
+	for _, list := range lists {
+		if len(list.APIResources) == 0 {
+			continue
+		}
+		for _, resource := range list.APIResources {
+			if len(resource.Verbs) == 0 {
+				continue
+			}
+			// filter to resources that support the specified verbs
+			if !sets.NewString(resource.Verbs...).HasAll("list") {
+				continue
+			}
+			resources = append(resources, resource.Name)
+			fmt.Printf("%s - %t\n", resource.Name, resource.Namespaced)
+		}
+	}
+
+	for _, res := range resources {
+		b := o.Builder.
+			WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
+			NamespaceParam(o.Namespace).DefaultNamespace().AllNamespaces(o.AllNamespaces).
+			ResourceTypeOrNameArgs(true, []string{resourceviews}...).
+			Latest()
+		err = b.Do().Visit(func(r *resource.Info, err error) error {
+			if err != nil {
+				return err
+			}
+			fmt.Printf("%+v\n", r)
+
+			if err := o.PrintObj(r.Object, setupOutputWriter(o.OutputDir, o.Out, path.Join(res+".json"))); err != nil {
+				return err
+			}
+			return nil
+		})
+		// fmt.Printf("%+v\n", resources)
+	}
+	return err
 }
 
 func (o *ClusterInfoDumpOptions) Run() error {

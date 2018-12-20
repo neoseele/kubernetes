@@ -781,21 +781,25 @@ func (b *Builder) visitorResult() *Result {
 
 	// visit items specified by paths
 	if len(b.paths) != 0 {
+		fmt.Printf("%s: %+v\n\n", "path", b.paths)
 		return b.visitByPaths()
 	}
 
 	// visit selectors
 	if b.labelSelector != nil || b.fieldSelector != nil {
+		fmt.Printf("%s: %+v\n\n", "visitBySelector", b.visitBySelector)
 		return b.visitBySelector()
 	}
 
 	// visit items specified by resource and name
 	if len(b.resourceTuples) != 0 {
+		fmt.Printf("%s: %+v\n\n", "visitByResource", b.visitByResource)
 		return b.visitByResource()
 	}
 
 	// visit items specified by name
 	if len(b.names) != 0 {
+		fmt.Printf("%s: %+v\n\n", "visitByName", b.visitByName)
 		return b.visitByName()
 	}
 
@@ -878,6 +882,9 @@ func (b *Builder) getClient(gv schema.GroupVersion) (RESTClient, error) {
 }
 
 func (b *Builder) visitByResource() *Result {
+
+	fmt.Printf("%s: %+v\n\n", "b.resourceTuples", b.resourceTuples)
+
 	// if b.singleItemImplied is false, this could be by default, so double-check length
 	// of resourceTuples to determine if in fact it is singleItemImplied or not
 	isSingleItemImplied := b.singleItemImplied
@@ -946,6 +953,8 @@ func (b *Builder) visitByResource() *Result {
 			Name:      tuple.Name,
 			Export:    b.export,
 		}
+
+		fmt.Printf("info: %+v\n\n", info)
 		items = append(items, info)
 	}
 
@@ -1015,6 +1024,7 @@ func (b *Builder) visitByName() *Result {
 	}
 	result.visitor = VisitorList(visitors)
 	result.sources = visitors
+	fmt.Printf("result: %+v\n\n", result)
 	return result
 }
 
@@ -1094,6 +1104,7 @@ func (b *Builder) Do() *Result {
 	} else {
 		r.visitor = NewDecoratedVisitor(r.visitor, helpers...)
 	}
+	fmt.Printf("b: %+v\n\n", b)
 	return r
 }
 
