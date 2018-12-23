@@ -954,7 +954,6 @@ func (b *Builder) visitByResource() *Result {
 			Export:    b.export,
 		}
 
-		fmt.Printf("info: %+v\n\n", info)
 		items = append(items, info)
 	}
 
@@ -1024,7 +1023,6 @@ func (b *Builder) visitByName() *Result {
 	}
 	result.visitor = VisitorList(visitors)
 	result.sources = visitors
-	fmt.Printf("result: %+v\n\n", result)
 	return result
 }
 
@@ -1104,7 +1102,6 @@ func (b *Builder) Do() *Result {
 	} else {
 		r.visitor = NewDecoratedVisitor(r.visitor, helpers...)
 	}
-	fmt.Printf("b: %+v\n\n", b)
 	return r
 }
 

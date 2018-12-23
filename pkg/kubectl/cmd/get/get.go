@@ -455,8 +455,6 @@ func (o *GetOptions) Run(f cmdutil.Factory, cmd *cobra.Command, args []string) e
 		}).
 		Do()
 
-	fmt.Printf("r: %+v\n\n", r)
-
 	if o.IgnoreNotFound {
 		r.IgnoreErrors(kapierrors.IsNotFound)
 	}

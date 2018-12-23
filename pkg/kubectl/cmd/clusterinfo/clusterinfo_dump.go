@@ -181,38 +181,47 @@ func (o *ClusterInfoDumpOptions) RunNew(f cmdutil.Factory) error {
 	}
 
 	// resources := []groupResource{}
-	resources := []string{}
+	resources := make(map[string]interface{})
 
 	for _, list := range lists {
 		if len(list.APIResources) == 0 {
 			continue
 		}
-		for _, resource := range list.APIResources {
-			if len(resource.Verbs) == 0 {
+		for _, r := range list.APIResources {
+			if len(r.Verbs) == 0 {
 				continue
 			}
 			// filter to resources that support the specified verbs
-			if !sets.NewString(resource.Verbs...).HasAll("list") {
+			if !sets.NewString(r.Verbs...).HasAll("list") {
 				continue
 			}
-			resources = append(resources, resource.Name)
-			fmt.Printf("%s - %t\n", resource.Name, resource.Namespaced)
+			if _, ok := resources[r.Name]; !ok {
+				resources[r.Name] = nil
+			}
+			// fmt.Printf("%s - %t\n", resource.Name, resource.Namespaced)
 		}
 	}
 
-	for _, res := range resources {
-		b := o.Builder.
-			WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
-			NamespaceParam(o.Namespace).DefaultNamespace().AllNamespaces(o.AllNamespaces).
-			ResourceTypeOrNameArgs(true, []string{resourceviews}...).
-			Latest()
+	// var err error
+	// resources["servicerolebinding"] = nil
+
+	b := o.Builder.
+		WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
+		NamespaceParam(o.Namespace).DefaultNamespace().AllNamespaces(o.AllNamespaces).
+		ContinueOnError().
+		Latest()
+
+	for k := range resources {
+		fmt.Printf("res: %s\n", k)
+
+		b.ResourceTypeOrNameArgs(true, []string{k}...)
 		err = b.Do().Visit(func(r *resource.Info, err error) error {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("%+v\n", r)
+			// fmt.Printf("%+v\n", r.Object)
 
-			if err := o.PrintObj(r.Object, setupOutputWriter(o.OutputDir, o.Out, path.Join(res+".json"))); err != nil {
+			if err := o.PrintObj(r.Object, setupOutputWriter(o.OutputDir, o.Out, path.Join(k+".json"))); err != nil {
 				return err
 			}
 			return nil
