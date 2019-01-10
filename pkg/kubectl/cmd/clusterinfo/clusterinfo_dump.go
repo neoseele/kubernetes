@@ -180,7 +180,6 @@ func (o *ClusterInfoDumpOptions) RunNew(f cmdutil.Factory) error {
 		return err
 	}
 
-	// resources := []groupResource{}
 	resources := make(map[string]interface{})
 
 	for _, list := range lists {
@@ -192,13 +191,13 @@ func (o *ClusterInfoDumpOptions) RunNew(f cmdutil.Factory) error {
 				continue
 			}
 			// filter to resources that support the specified verbs
-			if !sets.NewString(r.Verbs...).HasAll("list") {
+			if !sets.NewString(r.Verbs...).Has("list") {
 				continue
 			}
+			// add unique resource name to the resources map
 			if _, ok := resources[r.Name]; !ok {
 				resources[r.Name] = nil
 			}
-			// fmt.Printf("%s - %t\n", resource.Name, resource.Namespaced)
 		}
 	}
 
@@ -206,27 +205,25 @@ func (o *ClusterInfoDumpOptions) RunNew(f cmdutil.Factory) error {
 	// resources["servicerolebinding"] = nil
 
 	b := o.Builder.
-		WithScheme(scheme.Scheme, scheme.Scheme.PrioritizedVersionsAllGroups()...).
+		Unstructured().
 		NamespaceParam(o.Namespace).DefaultNamespace().AllNamespaces(o.AllNamespaces).
 		ContinueOnError().
 		Latest()
 
-	for k := range resources {
-		fmt.Printf("res: %s\n", k)
+	for r := range resources {
+		fmt.Printf(">> dumping resource %s\n", r)
 
-		b.ResourceTypeOrNameArgs(true, []string{k}...)
-		err = b.Do().Visit(func(r *resource.Info, err error) error {
+		b.ResourceTypeOrNameArgs(true, []string{r}...)
+		err = b.Do().Visit(func(info *resource.Info, err error) error {
 			if err != nil {
 				return err
 			}
-			// fmt.Printf("%+v\n", r.Object)
-
-			if err := o.PrintObj(r.Object, setupOutputWriter(o.OutputDir, o.Out, path.Join(k+".json"))); err != nil {
+			// fmt.Printf("%+v\n", info)
+			if err := o.PrintObj(info.Object, setupOutputWriter(o.OutputDir, o.Out, path.Join(r+".json"))); err != nil {
 				return err
 			}
 			return nil
 		})
-		// fmt.Printf("%+v\n", resources)
 	}
 	return err
 }
