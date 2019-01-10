@@ -203,17 +203,18 @@ func (o *ClusterInfoDumpOptions) RunNew(f cmdutil.Factory) error {
 
 	// var err error
 	// resources["servicerolebinding"] = nil
-
-	b := o.Builder.
-		Unstructured().
-		NamespaceParam(o.Namespace).DefaultNamespace().AllNamespaces(o.AllNamespaces).
-		ContinueOnError().
-		Latest()
+	var b *resource.Builder
 
 	for r := range resources {
 		fmt.Printf(">> dumping resource %s\n", r)
 
-		b.ResourceTypeOrNameArgs(true, []string{r}...)
+		b = f.NewBuilder().
+			Unstructured().
+			NamespaceParam(o.Namespace).DefaultNamespace().AllNamespaces(o.AllNamespaces).
+			ResourceTypeOrNameArgs(true, []string{r}...).
+			ContinueOnError().
+			Latest()
+
 		err = b.Do().Visit(func(info *resource.Info, err error) error {
 			if err != nil {
 				return err
