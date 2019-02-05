@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"reflect"
 
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -123,7 +123,6 @@ func (r *Result) Infos() ([]*Info, error) {
 		if err != nil {
 			return err
 		}
-		// fmt.Printf("%+v\n", info)
 		infos = append(infos, info)
 		return nil
 	})
